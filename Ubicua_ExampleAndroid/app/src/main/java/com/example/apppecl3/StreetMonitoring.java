@@ -3,15 +3,13 @@ package com.example.apppecl3;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
-import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -29,10 +27,11 @@ public class StreetMonitoring extends AppCompatActivity {
     private MqttClient client;
 
     // CONFIGURACIÓN
-    private static final String BROKER_URL = "tcp://10.0.2.2:1883";
+    // CAMBIO 1: Usar la IP real de la red local (donde está el broker), igual que en el Arduino
+    private static final String BROKER_URL = "tcp://192.168.1.122:1883";
     private static final String CLIENT_ID = MqttClient.generateClientId();
 
-    // TOPICS (Asegúrate que coinciden con los de tu Arduino)
+    // TOPICS
     private static final String TOPIC_TEMP = "ubicua_db/temperatura";
     private static final String TOPIC_HUM = "ubicua_db/humedad";
     private static final String TOPIC_LUZ = "ubicua_db/luz";
@@ -68,52 +67,60 @@ public class StreetMonitoring extends AppCompatActivity {
         conectarMqtt();
     }
 
+    // CAMBIO 2: Ejecutar la conexión en un hilo separado (Thread)
     private void conectarMqtt() {
-        try {
-            client = new MqttClient(BROKER_URL, CLIENT_ID, new MemoryPersistence());
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
+        new Thread(() -> {
+            try {
+                // Configuración inicial del cliente
+                client = new MqttClient(BROKER_URL, CLIENT_ID, new MemoryPersistence());
+                MqttConnectOptions options = new MqttConnectOptions();
+                options.setCleanSession(true);
 
-            client.setCallback(new MqttCallback() {
-                @Override
-                public void connectionLost(Throwable cause) {
-                    Log.e("ubicua", "¡Conexión MQTT perdida!");
-                }
+                // Definimos el Callback (qué hacer cuando llegan mensajes)
+                client.setCallback(new MqttCallback() {
+                    @Override
+                    public void connectionLost(Throwable cause) {
+                        Log.e("ubicua", "¡Conexión MQTT perdida!");
+                    }
 
-                @Override
-                public void messageArrived(String topic, MqttMessage message) throws Exception {
-                    String payload = new String(message.getPayload());
-                    Log.d("ubicua", "Recibido en [" + topic + "]: " + payload);
+                    @Override
+                    public void messageArrived(String topic, MqttMessage message) throws Exception {
+                        String payload = new String(message.getPayload());
+                        Log.d("ubicua", "Recibido en [" + topic + "]: " + payload);
 
-                    // Actualizamos la UI en el hilo principal
-                    runOnUiThread(() -> procesarMensaje(topic, payload));
-                }
+                        // IMPORTANTE: Volver al hilo principal para tocar la UI (TextViews)
+                        runOnUiThread(() -> procesarMensaje(topic, payload));
+                    }
 
-                @Override
-                public void deliveryComplete(IMqttDeliveryToken token) { }
-            });
+                    @Override
+                    public void deliveryComplete(IMqttDeliveryToken token) { }
+                });
 
-            Log.i("ubicua", "Conectando a " + BROKER_URL + "...");
-            client.connect(options);
-            Log.i("ubicua", "Conectado. Suscribiendo...");
+                Log.i("ubicua", "Conectando a " + BROKER_URL + "...");
 
-            client.subscribe(TOPIC_TEMP);
-            client.subscribe(TOPIC_HUM);
-            client.subscribe(TOPIC_LUZ);
+                // Esta línea es la que bloqueaba la app si no estaba en un hilo aparte
+                client.connect(options);
 
-        } catch (MqttException e) {
-            Log.e("ubicua", "Error MQTT: " + e.getMessage());
-            e.printStackTrace();
-        }
+                Log.i("ubicua", "Conectado. Suscribiendo...");
+
+                // Nos suscribimos a los topics
+                client.subscribe(TOPIC_TEMP);
+                client.subscribe(TOPIC_HUM);
+                client.subscribe(TOPIC_LUZ);
+
+            } catch (MqttException e) {
+                Log.e("ubicua", "Error MQTT: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start(); // .start() inicia el hilo
     }
 
-    // --- AQUÍ ESTABA EL PROBLEMA, AHORA ESTÁ ADAPTADO A TU JSON ---
     private void procesarMensaje(String topic, String mensaje) {
         try {
             // 1. Convertimos el String a JSON
             JSONObject jsonPrincipal = new JSONObject(mensaje);
 
-            // 2. Entramos al objeto "data" (IMPORTANTÍSIMO: Tu JSON lo tiene anidado)
+            // 2. Entramos al objeto "data"
             if (!jsonPrincipal.has("data")) {
                 Log.w("ubicua", "El JSON no tiene campo 'data'. Saltando...");
                 return;
@@ -122,37 +129,38 @@ public class StreetMonitoring extends AppCompatActivity {
 
             // 3. Extraemos el valor según el topic
             if (topic.equals(TOPIC_TEMP)) {
-                // Buscamos "temperature_celsius"
                 double temp = data.getDouble("temperature_celsius");
-                txtTemp.setText(String.format("%.1f ºC", temp)); // Formato con 1 decimal
+                txtTemp.setText(String.format("%.1f ºC", temp));
             }
             else if (topic.equals(TOPIC_HUM)) {
-                // Buscamos "humidity_percent"
                 double hum = data.getDouble("humidity_percent");
-                txtHum.setText(String.format("%.0f %%", hum)); // Sin decimales
+                txtHum.setText(String.format("%.0f %%", hum));
             }
             else if (topic.equals(TOPIC_LUZ)) {
-                // Buscamos "light_intensity"
                 int luz = data.getInt("light_intensity");
                 txtLuz.setText(luz + " lux");
             }
 
         } catch (Exception e) {
             Log.e("ubicua", "Error parseando JSON: " + e.getMessage());
-            // Si falla, no crashea, solo deja el valor anterior o "--"
         }
     }
 
     private void publicarMensajeMqtt(String topic, String message) {
-        try {
-            if (client != null && client.isConnected()) {
-                MqttMessage mqttMessage = new MqttMessage(message.getBytes());
-                mqttMessage.setQos(1);
-                client.publish(topic, mqttMessage);
+        // Publicar también es una operación de red, idealmente debería ir en un hilo,
+        // pero como es muy rápida y pequeña, a veces Android la permite.
+        // Si te da problemas, envuélvela también en un new Thread(() -> { ... }).start();
+        new Thread(() -> {
+            try {
+                if (client != null && client.isConnected()) {
+                    MqttMessage mqttMessage = new MqttMessage(message.getBytes());
+                    mqttMessage.setQos(1);
+                    client.publish(topic, mqttMessage);
+                }
+            } catch (MqttException e) {
+                Log.e("ubicua", "Error publicando: " + e.getMessage());
             }
-        } catch (MqttException e) {
-            Log.e("ubicua", "Error publicando: " + e.getMessage());
-        }
+        }).start();
     }
 
     @Override
