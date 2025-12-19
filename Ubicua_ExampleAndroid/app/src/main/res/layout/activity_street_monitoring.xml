@@ -24,66 +24,22 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="25dp"
-            app:cardBackgroundColor="@color/surface_dark"
-            app:cardCornerRadius="20dp"
-            app:strokeColor="@color/neon_purple"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="20dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:src="@drawable/ic_led"
-                    app:tint="@color/neon_purple"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="20dp"/>
-
-                <TextView
-                    android:text="Control LED Remoto"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:layout_weight="1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"/>
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/switchLed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:thumbTint="@color/neon_green"
-                    android:trackTint="@color/text_secondary"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginBottom="15dp"
             app:cardCornerRadius="15dp"
             app:cardBackgroundColor="@color/surface_dark"
             app:strokeColor="@color/neon_red"
             app:strokeWidth="1dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="20dp">
-
                 <TextView
                     android:text="TEMPERATURA"
                     android:textColor="@color/neon_red"
                     android:letterSpacing="0.1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
-
                 <TextView
                     android:id="@+id/txtTemperatura"
                     android:text="-- ºC"
@@ -104,7 +60,6 @@
             app:cardBackgroundColor="@color/surface_dark"
             app:strokeColor="@color/neon_blue"
             app:strokeWidth="1dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -135,7 +90,6 @@
             app:cardBackgroundColor="@color/surface_dark"
             app:strokeColor="@color/neon_yellow"
             app:strokeWidth="1dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -17,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+        View btnLedControl = findViewById(R.id.btnLedControl);
 
         // Ajuste de márgenes para las barras del sistema
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
@@ -24,10 +25,6 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
-        // --- CORRECCIÓN AQUÍ ---
-        // Ya no buscamos "Button", sino una "View" (que sirve para las tarjetas)
-        // Y usamos los IDs nuevos del diseño Dark Neon: btnHistoric y btnRealTime
 
         View btnHistory = findViewById(R.id.btnHistoric); // <--- El ID nuevo es btnHistoric
         View btnRealTime = findViewById(R.id.btnRealTime);
@@ -43,5 +40,12 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, StreetMonitoring.class);
             startActivity(intent);
         });
+
+        if (btnLedControl != null) {
+            btnLedControl.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, LedControlActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 }

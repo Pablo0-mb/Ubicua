@@ -23,7 +23,6 @@ import org.json.JSONObject;
 public class StreetMonitoring extends AppCompatActivity {
 
     private TextView txtTemp, txtHum, txtLuz;
-    private SwitchMaterial switchLed;
     private MqttClient client;
 
     // CONFIGURACIÓN
@@ -35,7 +34,6 @@ public class StreetMonitoring extends AppCompatActivity {
     private static final String TOPIC_TEMP = "ubicua_db/temperatura";
     private static final String TOPIC_HUM = "ubicua_db/humedad";
     private static final String TOPIC_LUZ = "ubicua_db/luz";
-    private static final String TOPIC_LED = "ubicua_db/led/set";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,15 +51,6 @@ public class StreetMonitoring extends AppCompatActivity {
         txtTemp = findViewById(R.id.txtTemperatura);
         txtHum = findViewById(R.id.txtHumedad);
         txtLuz = findViewById(R.id.txtLuz);
-        switchLed = findViewById(R.id.switchLed);
-
-        // Listener del LED
-        if (switchLed != null) {
-            switchLed.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                String mensaje = isChecked ? "ON" : "OFF";
-                publicarMensajeMqtt(TOPIC_LED, mensaje);
-            });
-        }
 
         // Iniciar conexión
         conectarMqtt();

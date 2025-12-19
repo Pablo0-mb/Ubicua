@@ -23,6 +23,10 @@
             android:name=".StreetSelection"
             android:exported="false" />
         <activity
+            android:name=".LedControlActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppPECL3" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
