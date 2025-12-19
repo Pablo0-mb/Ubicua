@@ -111,8 +111,11 @@ public class StreetSelection extends AppCompatActivity {
 
     private void mostrarListaYGrafico(List<Measurement> lista) {
         // Lista
-        ArrayAdapter<Measurement> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, lista);
-        listView.setAdapter(adapter);
+        ArrayAdapter<Measurement> adapter = new ArrayAdapter<>(
+                this,
+                R.layout.item_history_row, // <--- Aquí usamos tu nuevo archivo XML
+                lista
+        );        listView.setAdapter(adapter);
 
         // Gráfico
         if (lista.isEmpty()) {

@@ -29,11 +29,11 @@
             app:cardBackgroundColor="@color/surface_dark"
             app:cardElevation="4dp">
 
-            <com.github.mikephil.charting.charts.LineChart
-                android:id="@+id/chartSensores"
-                android:layout_width="match_parent"
-                android:layout_height="300dp"
-                android:layout_margin="10dp"/>
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/chartSensores"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_margin="10dp"/>
         </com.google.android.material.card.MaterialCardView>
 
         <ListView

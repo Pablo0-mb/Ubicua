@@ -11,7 +11,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.android.material.switchmaterial.SwitchMaterial; // Importante para el nuevo interruptor
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -25,12 +25,18 @@ import org.json.JSONObject;
 public class StreetMonitoring extends AppCompatActivity {
 
     private TextView txtTemp, txtHum, txtLuz;
-    private SwitchMaterial switchLed; // Variable para el interruptor
+    private SwitchMaterial switchLed;
     private MqttClient client;
 
-    // CONFIGURACIÓN MQTT
+    // CONFIGURACIÓN
     private static final String BROKER_URL = "tcp://10.0.2.2:1883";
     private static final String CLIENT_ID = MqttClient.generateClientId();
+
+    // TOPICS (Asegúrate que coinciden con los de tu Arduino)
+    private static final String TOPIC_TEMP = "ubicua_db/temperatura";
+    private static final String TOPIC_HUM = "ubicua_db/humedad";
+    private static final String TOPIC_LUZ = "ubicua_db/luz";
+    private static final String TOPIC_LED = "ubicua_db/led/set";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,21 +50,21 @@ public class StreetMonitoring extends AppCompatActivity {
             return insets;
         });
 
-        // 1. Vinculamos TODOS los elementos del nuevo XML Dark
+        // Vincular vistas
         txtTemp = findViewById(R.id.txtTemperatura);
         txtHum = findViewById(R.id.txtHumedad);
         txtLuz = findViewById(R.id.txtLuz);
-        switchLed = findViewById(R.id.switchLed); // <--- ESTO ES LO QUE SEGURAMENTE FALTABA
+        switchLed = findViewById(R.id.switchLed);
 
-        // 2. Configurar el Listener del LED (Evitar NullPointer)
+        // Listener del LED
         if (switchLed != null) {
             switchLed.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 String mensaje = isChecked ? "ON" : "OFF";
-                publicarMensajeMqtt("ubicua_db/led/set", mensaje);
+                publicarMensajeMqtt(TOPIC_LED, mensaje);
             });
         }
 
-        // 3. Conectar MQTT
+        // Iniciar conexión
         conectarMqtt();
     }
 
@@ -71,12 +77,15 @@ public class StreetMonitoring extends AppCompatActivity {
             client.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
-                    Log.e("ubicua", "Conexión perdida");
+                    Log.e("ubicua", "¡Conexión MQTT perdida!");
                 }
 
                 @Override
                 public void messageArrived(String topic, MqttMessage message) throws Exception {
                     String payload = new String(message.getPayload());
+                    Log.d("ubicua", "Recibido en [" + topic + "]: " + payload);
+
+                    // Actualizamos la UI en el hilo principal
                     runOnUiThread(() -> procesarMensaje(topic, payload));
                 }
 
@@ -84,14 +93,53 @@ public class StreetMonitoring extends AppCompatActivity {
                 public void deliveryComplete(IMqttDeliveryToken token) { }
             });
 
+            Log.i("ubicua", "Conectando a " + BROKER_URL + "...");
             client.connect(options);
-            client.subscribe("ubicua_db/temperatura");
-            client.subscribe("ubicua_db/humedad");
-            client.subscribe("ubicua_db/luz");
-            // No nos suscribimos al LED para no hacer bucle, solo publicamos
+            Log.i("ubicua", "Conectado. Suscribiendo...");
+
+            client.subscribe(TOPIC_TEMP);
+            client.subscribe(TOPIC_HUM);
+            client.subscribe(TOPIC_LUZ);
 
         } catch (MqttException e) {
+            Log.e("ubicua", "Error MQTT: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    // --- AQUÍ ESTABA EL PROBLEMA, AHORA ESTÁ ADAPTADO A TU JSON ---
+    private void procesarMensaje(String topic, String mensaje) {
+        try {
+            // 1. Convertimos el String a JSON
+            JSONObject jsonPrincipal = new JSONObject(mensaje);
+
+            // 2. Entramos al objeto "data" (IMPORTANTÍSIMO: Tu JSON lo tiene anidado)
+            if (!jsonPrincipal.has("data")) {
+                Log.w("ubicua", "El JSON no tiene campo 'data'. Saltando...");
+                return;
+            }
+            JSONObject data = jsonPrincipal.getJSONObject("data");
+
+            // 3. Extraemos el valor según el topic
+            if (topic.equals(TOPIC_TEMP)) {
+                // Buscamos "temperature_celsius"
+                double temp = data.getDouble("temperature_celsius");
+                txtTemp.setText(String.format("%.1f ºC", temp)); // Formato con 1 decimal
+            }
+            else if (topic.equals(TOPIC_HUM)) {
+                // Buscamos "humidity_percent"
+                double hum = data.getDouble("humidity_percent");
+                txtHum.setText(String.format("%.0f %%", hum)); // Sin decimales
+            }
+            else if (topic.equals(TOPIC_LUZ)) {
+                // Buscamos "light_intensity"
+                int luz = data.getInt("light_intensity");
+                txtLuz.setText(luz + " lux");
+            }
+
+        } catch (Exception e) {
+            Log.e("ubicua", "Error parseando JSON: " + e.getMessage());
+            // Si falla, no crashea, solo deja el valor anterior o "--"
         }
     }
 
@@ -101,31 +149,21 @@ public class StreetMonitoring extends AppCompatActivity {
                 MqttMessage mqttMessage = new MqttMessage(message.getBytes());
                 mqttMessage.setQos(1);
                 client.publish(topic, mqttMessage);
-                Log.i("ubicua", "LED enviado: " + message);
-            } else {
-                Toast.makeText(this, "Conectando MQTT...", Toast.LENGTH_SHORT).show();
+            }
+        } catch (MqttException e) {
+            Log.e("ubicua", "Error publicando: " + e.getMessage());
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            if (client != null && client.isConnected()) {
+                client.disconnect();
             }
         } catch (MqttException e) {
             e.printStackTrace();
         }
-    }
-
-    private void procesarMensaje(String topic, String mensaje) {
-        String valorFinal = mensaje;
-        try {
-            JSONObject json = new JSONObject(mensaje);
-            if (json.has("data")) {
-                JSONObject data = json.getJSONObject("data");
-                if (topic.contains("temperatura")) valorFinal = String.valueOf(data.optDouble("temperature_celsius"));
-                else if (topic.contains("humedad")) valorFinal = String.valueOf(data.optDouble("humidity_percent"));
-                else if (topic.contains("luz")) valorFinal = String.valueOf(data.optInt("light_intensity"));
-            }
-        } catch (Exception e) {
-            valorFinal = mensaje;
-        }
-
-        if (topic.contains("temperatura")) txtTemp.setText(valorFinal + " ºC");
-        else if (topic.contains("humedad")) txtHum.setText(valorFinal + " %");
-        else if (topic.contains("luz")) txtLuz.setText(valorFinal + " lux");
     }
 }
