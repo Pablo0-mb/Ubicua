@@ -3,7 +3,6 @@ package com.example.apppecl3;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,35 +18,30 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Ajuste de barras del sistema (diseño moderno)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        // Ajuste de márgenes para las barras del sistema
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // ------------------------------------------------------------
-        // CONFIGURACIÓN DE LOS BOTONES DEL MENÚ
-        // -------------------------------------------------------------
+        // --- CORRECCIÓN AQUÍ ---
+        // Ya no buscamos "Button", sino una "View" (que sirve para las tarjetas)
+        // Y usamos los IDs nuevos del diseño Dark Neon: btnHistoric y btnRealTime
 
-        // 1. Botón "Ver Histórico de Datos" -> Abre StreetSelection
-        Button btnHistory = findViewById(R.id.btnHistory);
-        btnHistory.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, StreetSelection.class);
-                startActivity(intent);
-            }
+        View btnHistory = findViewById(R.id.btnHistoric); // <--- El ID nuevo es btnHistoric
+        View btnRealTime = findViewById(R.id.btnRealTime);
+
+        // Configurar el click para ir al Histórico
+        btnHistory.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, StreetSelection.class);
+            startActivity(intent);
         });
 
-        // 2. Botón "Monitor Tiempo Real" -> Abre StreetMonitoring
-        Button btnRealTime = findViewById(R.id.btnRealTime);
-        btnRealTime.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, StreetMonitoring.class);
-                startActivity(intent);
-            }
+        // Configurar el click para ir al Tiempo Real
+        btnRealTime.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, StreetMonitoring.class);
+            startActivity(intent);
         });
     }
 }
